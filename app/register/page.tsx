@@ -7,7 +7,7 @@ import { z } from "zod";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Camera, X, Loader2, AlertCircle } from "lucide-react";
-import { FaGoogle, FaGithub, FaApple } from "react-icons/fa";
+import { FaGithub, FaApple } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
 
 // ─── Validation Schema ───────────────────────────────────────────────
