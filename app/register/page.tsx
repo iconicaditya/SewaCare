@@ -186,7 +186,7 @@ export default function RegisterPage() {
         <div className="relative z-10 flex flex-col justify-center px-16 xl:px-24">
           <div className="mb-16">
             <img
-              src="/applogo.png"
+              src="/logo.png"
               alt="SewaCare Logo"
               className="h-14 w-auto"
             />

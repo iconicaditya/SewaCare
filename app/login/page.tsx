@@ -112,7 +112,7 @@ export default function LoginPage() {
           {/* Logo */}
           <div className="mb-16">
             <img
-              src="/applogo.png"
+              src="/logo.png"
               alt="SewaCare Logo"
               className="h-14 w-auto"
             />
