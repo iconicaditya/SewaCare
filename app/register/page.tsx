@@ -220,6 +220,7 @@ export default function RegisterPage() {
             </div>
           )}
 
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           <form onSubmit={handleSubmit(onSubmit as any)} noValidate>
             {/* ── Profile Image Upload ──────────────────────────────── */}
             <div className="flex items-center gap-4 mb-6">

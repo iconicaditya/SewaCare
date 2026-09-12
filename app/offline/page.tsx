@@ -1,3 +1,5 @@
+"use client";
+
 import { WifiOff, RefreshCw } from "lucide-react";
 
 export default function OfflinePage() {
@@ -17,10 +19,10 @@ export default function OfflinePage() {
         {/* Text */}
         <div className="space-y-3">
           <h1 className="text-2xl font-bold text-white tracking-tight">
-            You're Offline
+            {"You're Offline"}
           </h1>
           <p className="text-slate-400 text-sm leading-relaxed">
-            It looks like you've lost your internet connection.
+            {"It looks like you've lost your internet connection."}
             <br />
             Please check your network and try again.
           </p>

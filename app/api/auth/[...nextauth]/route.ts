@@ -50,7 +50,6 @@ const handler = NextAuth({
           } else {
             // ── Existing user: UPDATE name & profile image from Google
             const dbUser = existingUser[0];
-            const updates: string[] = [];
             const newName = user.name || dbUser.full_name;
             const newImage = user.image || dbUser.profile_image;
 
@@ -77,7 +76,8 @@ const handler = NextAuth({
     },
     async jwt({ token, account }) {
       if (account) {
-        token.provider = account.provider;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (token as any).provider = account.provider;
       }
       return token;
     },
@@ -92,11 +92,13 @@ const handler = NextAuth({
 
         if (result.length > 0) {
           const dbUser = result[0];
-          (session as any).user.id = dbUser.id;
-          (session as any).user.fullName = dbUser.full_name;
-          (session as any).user.role = dbUser.role;
-          (session as any).user.department = dbUser.department;
-          (session as any).user.profileImage = dbUser.profile_image;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const u = session.user as any;
+          u.id = dbUser.id;
+          u.fullName = dbUser.full_name;
+          u.role = dbUser.role;
+          u.department = dbUser.department;
+          u.profileImage = dbUser.profile_image;
         }
       }
       return session;

@@ -29,9 +29,12 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
   });
 
   // Get user initials from name
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userName = (session?.user as any)?.fullName || session?.user?.name || "User";
   const userEmail = session?.user?.email || "";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userImage = (session?.user as any)?.profileImage || session?.user?.image;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userRole = (session?.user as any)?.role || "Doctor";
   const initials = userName
     .split(" ")
