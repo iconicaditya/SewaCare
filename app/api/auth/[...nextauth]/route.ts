@@ -15,6 +15,7 @@ const handler = NextAuth({
   session: {
     strategy: "jwt",
   },
+  trustHost: true,
   pages: {
     signIn: "/login",
     error: "/login",
