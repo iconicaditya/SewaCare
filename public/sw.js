@@ -1,6 +1,6 @@
-const CACHE_NAME = 'sewacare-v1';
-const STATIC_CACHE = 'sewacare-static-v1';
-const DYNAMIC_CACHE = 'sewacare-dynamic-v1';
+const CACHE_NAME = 'sewacare-v2';
+const STATIC_CACHE = 'sewacare-static-v2';
+const DYNAMIC_CACHE = 'sewacare-dynamic-v2';
 
 const STATIC_ASSETS = [
   '/',
