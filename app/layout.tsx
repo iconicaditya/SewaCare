@@ -31,11 +31,14 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/applogo.png", type: "image/png" },
+      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-384x384.png", sizes: "384x384", type: "image/png" },
+      { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
     ],
     apple: [
       {
-        url: "/applogo.png",
+        url: "/icons/apple-touch-icon.png",
+        sizes: "180x180",
         type: "image/png",
       },
     ],
@@ -43,7 +46,7 @@ export const metadata: Metadata = {
   other: {
     "mobile-web-app-capable": "yes",
     "msapplication-TileColor": "#0e7490",
-    "msapplication-TileImage": "/applogo.png",
+    "msapplication-TileImage": "/icons/icon-144x144.png",
   },
 };
 

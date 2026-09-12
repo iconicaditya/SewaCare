@@ -8,7 +8,8 @@ const STATIC_ASSETS = [
   '/register',
   '/manifest.json',
   '/favicon.ico',
-  '/applogo.png',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png',
   '/offline',
 ];
 
