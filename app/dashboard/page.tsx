@@ -13,8 +13,17 @@ import {
   AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import StatCard from "@/components/dashboard/StatCard";
 import AnimatedGraphs from "@/components/dashboard/AnimatedGraphs";
+
+// ─── Greeting helper ──────────────────────────────────────────────
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good Morning";
+  if (hour < 17) return "Good Afternoon";
+  return "Good Evening";
+}
 
 // Mock data for today's appointments
 const todayAppointments = [
@@ -166,13 +175,18 @@ function getStatusBadge(status: string) {
 }
 
 export default function DashboardPage() {
+  const { data: session } = useSession();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const userName = (session?.user as any)?.fullName || session?.user?.name || "Doctor";
+  const firstName = userName.split(" ")[0];
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Welcome Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            {"Good Morning, Dr. Rajesh 👋"}
+            {`${getGreeting()}, ${firstName} 👋`}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
             {"Here's your practice overview for today"}
