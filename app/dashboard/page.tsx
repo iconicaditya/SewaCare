@@ -12,12 +12,13 @@ import {
   TrendingUp,
   AlertCircle,
 } from "lucide-react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import StatCard from "@/components/dashboard/StatCard";
 import AnimatedGraphs from "@/components/dashboard/AnimatedGraphs";
 
-// ─── Greeting helper ──────────────────────────────────────────────
+// ─── Greeting helper (client-only to avoid hydration mismatch) ─────
 function getGreeting(): string {
   const hour = new Date().getHours();
   if (hour < 12) return "Good Morning";
@@ -179,6 +180,12 @@ export default function DashboardPage() {
   const userName = session?.user?.name || "";
   const firstName = userName.split(" ")[0] || "";
 
+  // Compute greeting client-only to prevent hydration mismatch
+  const [greeting, setGreeting] = useState("");
+  useEffect(() => {
+    setGreeting(getGreeting());
+  }, []);
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Welcome Header */}
@@ -186,10 +193,12 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
             {status === "loading"
-              ? `${getGreeting()}... 👋`
-              : firstName
-              ? `${getGreeting()}, ${firstName} 👋`
-              : `${getGreeting()} 👋`}
+              ? "Loading... 👋"
+              : greeting && firstName
+              ? `${greeting}, ${firstName} 👋`
+              : greeting
+              ? `${greeting} 👋`
+              : "\u00A0"}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
             {"Here's your practice overview for today"}
