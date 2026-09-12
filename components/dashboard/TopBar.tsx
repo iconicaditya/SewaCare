@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
   Search,
@@ -176,9 +177,10 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
               {/* Logout */}
               <div className="border-t border-gray-100 pt-1">
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     setDropdownOpen(false);
-                    signOut({ callbackUrl: "/login" });
+                    await signOut({ redirect: false });
+                    router.push("/login");
                   }}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
                 >
