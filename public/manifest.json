@@ -7,13 +7,19 @@
   "display": "standalone",
   "orientation": "any",
   "theme_color": "#0e7490",
-  "background_color": "#0f172a",
+  "background_color": "#ffffff",
   "lang": "en",
   "dir": "ltr",
   "id": "/",
   "categories": ["medical", "health", "business"],
   "prefer_related_applications": false,
   "icons": [
+    {
+      "src": "/applogo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/icons/icon-72x72.png",
       "sizes": "72x72",
