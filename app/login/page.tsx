@@ -7,8 +7,6 @@ import { z } from "zod";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
-import { FaGithub, FaApple } from "react-icons/fa";
-import { FaXTwitter } from "react-icons/fa6";
 
 // ─── Validation Schema ───────────────────────────────────────────────
 const loginSchema = z.object({
@@ -237,19 +235,6 @@ export default function LoginPage() {
             </svg>
             Continue with Google
           </button>
-
-          {/* Social Row */}
-          <div className="flex gap-3 mt-3">
-            <button type="button" className="flex-1 flex items-center justify-center py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-600">
-              <FaGithub className="w-5 h-5" />
-            </button>
-            <button type="button" className="flex-1 flex items-center justify-center py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-600">
-              <FaApple className="w-5 h-5" />
-            </button>
-            <button type="button" className="flex-1 flex items-center justify-center py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-600">
-              <FaXTwitter className="w-4 h-4" />
-            </button>
-          </div>
 
           {/* Sign Up */}
           <p className="text-center text-sm text-gray-500 mt-8">
