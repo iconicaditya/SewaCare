@@ -176,8 +176,7 @@ function getStatusBadge(status: string) {
 
 export default function DashboardPage() {
   const { data: session } = useSession();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const userName = (session?.user as any)?.fullName || session?.user?.name || "Doctor";
+  const userName = session?.user?.name || "Doctor";
   const firstName = userName.split(" ")[0];
 
   return (

@@ -92,6 +92,8 @@ const handler = NextAuth({
 
         if (result.length > 0) {
           const dbUser = result[0];
+          // Set the standard name field so it's available everywhere
+          session.user.name = dbUser.full_name;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const u = session.user as any;
           u.id = dbUser.id;
