@@ -175,9 +175,9 @@ function getStatusBadge(status: string) {
 }
 
 export default function DashboardPage() {
-  const { data: session } = useSession();
-  const userName = session?.user?.name || "Doctor";
-  const firstName = userName.split(" ")[0];
+  const { data: session, status } = useSession();
+  const userName = session?.user?.name || "";
+  const firstName = userName.split(" ")[0] || "";
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -185,7 +185,11 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            {`${getGreeting()}, ${firstName} 👋`}
+            {status === "loading"
+              ? `${getGreeting()}... 👋`
+              : firstName
+              ? `${getGreeting()}, ${firstName} 👋`
+              : `${getGreeting()} 👋`}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
             {"Here's your practice overview for today"}

@@ -18,7 +18,7 @@ interface TopBarProps {
 }
 
 export default function TopBar({ onMenuClick }: TopBarProps) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -30,20 +30,17 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
     day: "numeric",
   });
 
-  // Get user initials from name
+  const isLoading = status === "loading";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const userName = (session?.user as any)?.fullName || session?.user?.name || "User";
+  const userName = (session?.user as any)?.fullName || session?.user?.name || "";
   const userEmail = session?.user?.email || "";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userImage = (session?.user as any)?.profileImage || session?.user?.image;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const userRole = (session?.user as any)?.role || "Doctor";
+  const userRole = (session?.user as any)?.role || "";
   const initials = userName
-    .split(" ")
-    .map((n: string) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+    ? userName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
+    : "";
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -101,24 +98,37 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
             onClick={() => setDropdownOpen(!dropdownOpen)}
             className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
           >
-            {userImage ? (
+            {isLoading ? (
+              <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
+            ) : userImage ? (
               <img
                 src={userImage}
                 alt={userName}
                 className="w-8 h-8 rounded-full object-cover shadow-sm"
               />
-            ) : (
+            ) : initials ? (
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-sm font-bold shadow-sm">
                 {initials}
               </div>
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
             )}
             <div className="hidden md:block text-left">
-              <p className="text-sm font-semibold text-gray-900 leading-tight">
-                {userName}
-              </p>
-              <p className="text-[11px] text-gray-400 leading-tight">
-                {userRole}
-              </p>
+              {isLoading ? (
+                <>
+                  <div className="h-3.5 w-16 bg-gray-200 rounded animate-pulse mb-1" />
+                  <div className="h-2.5 w-12 bg-gray-100 rounded animate-pulse" />
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold text-gray-900 leading-tight">
+                    {userName || "User"}
+                  </p>
+                  <p className="text-[11px] text-gray-400 leading-tight">
+                    {userRole || "Member"}
+                  </p>
+                </>
+              )}
             </div>
             <ChevronDown
               className={`w-4 h-4 text-gray-400 hidden md:block transition-transform duration-200 ${
@@ -139,17 +149,19 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
                       alt={userName}
                       className="w-10 h-10 rounded-full object-cover shadow-sm"
                     />
-                  ) : (
+                  ) : initials ? (
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-sm font-bold shadow-sm">
                       {initials}
                     </div>
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gray-200 animate-pulse" />
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-900 truncate">
-                      {userName}
+                      {userName || "User"}
                     </p>
                     <p className="text-xs text-gray-400 truncate">
-                      {userEmail}
+                      {userEmail || "No email"}
                     </p>
                   </div>
                 </div>
