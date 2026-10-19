@@ -5,25 +5,92 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
-  FileText,
-  Pill,
+  Stethoscope,
   Calendar,
+  MessageSquare,
+  FlaskConical,
+  Scan,
+  Ambulance,
+  Building2,
+  HeartPulse,
+  Scissors,
+  Droplets,
+  Pill,
+  Package,
+  Wrench,
+  CreditCard,
+  Shield,
+  TrendingUp,
+  UserCog,
+  Building,
+  BarChart3,
+  Bell,
+  FileText,
+  ScrollText,
   Settings,
   X,
-  HelpCircle,
 } from "lucide-react";
 
-const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Patients", href: "/dashboard/patients", icon: Users },
-  { name: "Reports", href: "/dashboard/reports", icon: FileText },
-  { name: "Prescriptions", href: "/dashboard/prescriptions", icon: Pill },
-  { name: "Appointments", href: "/dashboard/appointments", icon: Calendar },
-];
+interface NavItem {
+  name: string;
+  href: string;
+  icon: any;
+}
 
-const bottomNav = [
-  { name: "Settings", href: "/dashboard/settings", icon: Settings },
-  { name: "Help & Support", href: "/dashboard/help", icon: HelpCircle },
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
+const navigation: NavGroup[] = [
+  {
+    label: "Clinical",
+    items: [
+      { name: "Patients", href: "/dashboard/patients", icon: Users },
+      { name: "Reception & OPD", href: "/dashboard/reception", icon: Stethoscope },
+      { name: "Appointments", href: "/dashboard/appointments", icon: Calendar },
+      { name: "Consultations", href: "/dashboard/consultations", icon: MessageSquare },
+      { name: "Laboratory", href: "/dashboard/laboratory/catalog", icon: FlaskConical },
+      { name: "Radiology", href: "/dashboard/radiology/services", icon: Scan },
+      { name: "Emergency", href: "/dashboard/emergency/patients", icon: Ambulance },
+      { name: "Hospitalization", href: "/dashboard/hospitalization/admissions", icon: Building2 },
+      { name: "ICU", href: "/dashboard/icu/patients", icon: HeartPulse },
+      { name: "Operation Theatre", href: "/dashboard/ot/requests", icon: Scissors },
+      { name: "Blood Bank", href: "/dashboard/blood-bank/inventory", icon: Droplets },
+    ],
+  },
+  {
+    label: "Pharmacy & Inventory",
+    items: [
+      { name: "Pharmacy", href: "/dashboard/pharmacy/medicines", icon: Pill },
+      { name: "Inventory", href: "/dashboard/inventory/items", icon: Package },
+      { name: "Equipment", href: "/dashboard/equipment/list", icon: Wrench },
+    ],
+  },
+  {
+    label: "Finance",
+    items: [
+      { name: "Billing & Payments", href: "/dashboard/billing/invoices", icon: CreditCard },
+      { name: "Insurance", href: "/dashboard/insurance/providers", icon: Shield },
+      { name: "Finance", href: "/dashboard/finance/revenue", icon: TrendingUp },
+    ],
+  },
+  {
+    label: "Staff",
+    items: [
+      { name: "Staff & HR", href: "/dashboard/staff", icon: UserCog },
+      { name: "Departments", href: "/dashboard/departments", icon: Building },
+    ],
+  },
+  {
+    label: "Reports",
+    items: [
+      { name: "Reports", href: "/dashboard/reports", icon: BarChart3 },
+      { name: "Notifications", href: "/dashboard/notifications", icon: Bell },
+      { name: "Documents", href: "/dashboard/documents", icon: FileText },
+      { name: "Audit Logs", href: "/dashboard/audit-logs", icon: ScrollText },
+    ],
+  },
 ];
 
 interface SidebarProps {
@@ -34,6 +101,11 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
 
+  const isActive = (href: string) => {
+    if (href === "/dashboard") return pathname === "/dashboard";
+    return pathname.startsWith(href);
+  };
+
   return (
     <aside
       className={`
@@ -43,14 +115,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         ${isOpen ? "translate-x-0" : "-translate-x-full"}
       `}
     >
-      {/* Logo / Brand */}
+      {/* Logo */}
       <div className="flex items-center justify-between h-16 px-5 border-b border-gray-200">
-        <Link href="/dashboard" className="flex items-center">
-          <img
-            src="/logo.png"
-            alt="SewaCare Logo"
-            className="h-10 w-auto"
-          />
+        <Link href="/dashboard" className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold text-sm">SC</span>
+          </div>
+          <span className="text-lg font-bold text-gray-900">SewaCare</span>
         </Link>
         <button
           onClick={onClose}
@@ -60,64 +131,87 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         </button>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex flex-col h-[calc(100%-4rem)] px-3 py-4">
-        <div className="flex-1 space-y-1">
-          {navigation.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                onClick={onClose}
-                className={`
-                  flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
-                  transition-all duration-150
-                  ${
-                    isActive
-                      ? "bg-emerald-50 text-emerald-700 shadow-sm"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                  }
-                `}
-              >
-                <item.icon
-                  className={`w-[18px] h-[18px] flex-shrink-0 ${
-                    isActive ? "text-emerald-600" : "text-gray-400"
-                  }`}
-                />
-                {item.name}
-                {isActive && (
-                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                )}
-              </Link>
-            );
-          })}
+      {/* Scrollable Navigation */}
+      <nav className="flex flex-col h-[calc(100%-4rem)]">
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+          {/* Dashboard Link */}
+          <Link
+            href="/dashboard"
+            onClick={onClose}
+            className={`
+              flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+              transition-all duration-150
+              ${
+                pathname === "/dashboard"
+                  ? "bg-emerald-50 text-emerald-700 shadow-sm"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+              }
+            `}
+          >
+            <LayoutDashboard
+              className={`w-[18px] h-[18px] flex-shrink-0 ${
+                pathname === "/dashboard" ? "text-emerald-600" : "text-gray-400"
+              }`}
+            />
+            Dashboard
+          </Link>
+
+          {/* Grouped Navigation */}
+          {navigation.map((group) => (
+            <div key={group.label}>
+              <p className="px-3 mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                {group.label}
+              </p>
+              <div className="space-y-0.5">
+                {group.items.map((item) => {
+                  const active = isActive(item.href);
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      onClick={onClose}
+                      className={`
+                        flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium
+                        transition-all duration-150
+                        ${
+                          active
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        }
+                      `}
+                    >
+                      <item.icon
+                        className={`w-[18px] h-[18px] flex-shrink-0 ${
+                          active ? "text-emerald-600" : "text-gray-400"
+                        }`}
+                      />
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
 
-        {/* Bottom Navigation */}
-        <div className="space-y-1 border-t border-gray-100 pt-3">
-          {bottomNav.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                onClick={onClose}
-                className={`
-                  flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
-                  transition-all duration-150
-                  ${
-                    isActive
-                      ? "bg-emerald-50 text-emerald-700"
-                      : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
-                  }
-                `}
-              >
-                <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
-                {item.name}
-              </Link>
-            );
-          })}
+        {/* Bottom - Settings */}
+        <div className="px-3 py-3 border-t border-gray-100">
+          <Link
+            href="/dashboard/settings"
+            onClick={onClose}
+            className={`
+              flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+              transition-all duration-150
+              ${
+                pathname === "/dashboard/settings"
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+              }
+            `}
+          >
+            <Settings className="w-[18px] h-[18px] flex-shrink-0" />
+            Settings
+          </Link>
         </div>
       </nav>
     </aside>
