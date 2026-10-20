@@ -78,7 +78,7 @@ export default function RootLayout({
       >
         <PWARegister />
         <Providers>
-          <main className="flex-grow">{children}</main>
+          <div className="min-h-0 flex-grow">{children}</div>
         </Providers>
       </body>
     </html>

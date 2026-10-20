@@ -2,26 +2,36 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Building2, Camera, FileText, LockKeyhole, Plus, Save, SlidersHorizontal, UserRound } from "lucide-react";
+import { Building2, Camera, Eye, FileText, LockKeyhole, Plus, Save, SlidersHorizontal, UserRound, X } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs } from "@/components/ui/tabs";
 import SectionHeader from "@/components/ui/section-header";
 
 type SettingsState = {
   profile: { fullName: string; email: string; role: string; department: string; profileImage: string };
-  templates: { id: string; name: string; category: string; enabled: boolean }[];
-  reportInfo: { hospitalName: string; logo: string; license: string; tagline: string; phone: string; email: string; website: string; address: string; followUpInstructions: string; followUpDate: string; emergencyRedFlags: string; signature: string; disclaimer: string; fields: { id: string; label: string; enabled: boolean }[] };
+  templates: { id: string; name: string; category: string; enabled: boolean; fieldIds: string[] }[];
+  reportInfo: { hospitalName: string; logo: string; license: string; tagline: string; phone: string; email: string; website: string; address: string; followUpInstructions: string; followUpDate: string; emergencyRedFlags: string; hospitalStamp: string; doctorName: string; doctorEducations: string; doctorRole: string; doctorSignature: string; disclaimer: string; fields: { id: string; label: string; value: string }[] };
   security: { sessionTimeout: string; loginAlerts: boolean; requireReauthentication: boolean };
   preferences: { language: string; dateFormat: string; emailNotifications: boolean; inAppNotifications: boolean };
 };
 
+const patientFieldIds = ["patientName", "patientMrn", "patientAgeGender", "patientDob", "patientContact"];
+const encounterFieldIds = ["referringDoctor"];
+const clinicalFieldIds = ["chiefComplaints", "vitalSigns", "clinicalFindings", "diagnosis", "prescriptions", "labRadiologyFindings", "advice"];
+const signOffFieldIds = ["followUpInstructions", "followUpDate", "emergencyRedFlags"];
+const allReportFieldIds = [...patientFieldIds, ...encounterFieldIds, ...clinicalFieldIds, ...signOffFieldIds];
+
+const defaultTemplates: SettingsState["templates"] = [
+  { id: "consultation", name: "Clinical Consultation", category: "Clinical", enabled: true, fieldIds: allReportFieldIds },
+  { id: "discharge", name: "Discharge Summary", category: "Clinical", enabled: true, fieldIds: allReportFieldIds },
+  { id: "lab", name: "Laboratory Results", category: "Laboratory", enabled: true, fieldIds: allReportFieldIds },
+  { id: "radiology", name: "Radiology Report", category: "Imaging", enabled: true, fieldIds: allReportFieldIds },
+  { id: "prescription", name: "Prescription & Medication Summary", category: "Clinical", enabled: true, fieldIds: allReportFieldIds },
+];
+
 const defaultSettings: SettingsState = {
   profile: { fullName: "", email: "", role: "", department: "", profileImage: "" },
-  templates: [
-    { id: "discharge", name: "Discharge summary", category: "Clinical", enabled: true },
-    { id: "lab", name: "Laboratory result", category: "Laboratory", enabled: true },
-    { id: "radiology", name: "Radiology report", category: "Imaging", enabled: true },
-  ],
+  templates: defaultTemplates,
   reportInfo: {
     hospitalName: "SewaCare Hospital",
     logo: "",
@@ -34,27 +44,29 @@ const defaultSettings: SettingsState = {
     followUpInstructions: "",
     followUpDate: "",
     emergencyRedFlags: "",
-    signature: "",
+    hospitalStamp: "",
+    doctorName: "",
+    doctorEducations: "",
+    doctorRole: "",
+    doctorSignature: "",
     disclaimer: "This report is confidential and intended only for the named patient and authorized healthcare professionals.",
     fields: [
-      { id: "patientName", label: "Patient full name", enabled: true },
-      { id: "patientMrn", label: "Patient ID / Medical record number (MRN)", enabled: true },
-      { id: "patientAgeGender", label: "Age and gender", enabled: true },
-      { id: "patientDob", label: "Date of birth (DOB)", enabled: true },
-      { id: "patientContact", label: "Patient contact details", enabled: true },
-      { id: "patientWard", label: "Assigned ward / room number", enabled: true },
-      { id: "reportTitle", label: "Report title / type", enabled: true },
-      { id: "reportId", label: "Report ID / accession number", enabled: true },
-      { id: "encounterDate", label: "Encounter / visit date and time", enabled: true },
-      { id: "referringDoctor", label: "Referring doctor / physician", enabled: true },
-      { id: "attendingDoctor", label: "Treating / attending doctor", enabled: true },
-      { id: "chiefComplaints", label: "Chief complaints", enabled: true },
-      { id: "vitalSigns", label: "Vital signs", enabled: true },
-      { id: "clinicalFindings", label: "Clinical examination / findings", enabled: true },
-      { id: "diagnosis", label: "Diagnosis", enabled: true },
-      { id: "prescriptions", label: "Prescriptions / medications", enabled: true },
-      { id: "labRadiologyFindings", label: "Laboratory or radiology findings", enabled: true },
-      { id: "advice", label: "Advice and lifestyle recommendations", enabled: true },
+      { id: "patientName", label: "Patient full name", value: "" },
+      { id: "patientMrn", label: "Patient ID / Medical record number (MRN)", value: "" },
+      { id: "patientAgeGender", label: "Age and gender", value: "" },
+      { id: "patientDob", label: "Date of birth (DOB)", value: "" },
+      { id: "patientContact", label: "Phone Number", value: "" },
+      { id: "referringDoctor", label: "Referring doctor / physician", value: "" },
+      { id: "chiefComplaints", label: "Chief complaints", value: "" },
+      { id: "vitalSigns", label: "Vital signs", value: "" },
+      { id: "clinicalFindings", label: "Clinical examination / findings", value: "" },
+      { id: "diagnosis", label: "Diagnosis", value: "" },
+      { id: "prescriptions", label: "Prescriptions / medications", value: "" },
+      { id: "labRadiologyFindings", label: "Laboratory or radiology findings", value: "" },
+      { id: "advice", label: "Advice and lifestyle recommendations", value: "" },
+      { id: "followUpInstructions", label: "Follow-up instructions", value: "" },
+      { id: "followUpDate", label: "Follow-up date", value: "" },
+      { id: "emergencyRedFlags", label: "Emergency red flag symptoms", value: "" },
     ],
   },
   security: { sessionTimeout: "30", loginAlerts: true, requireReauthentication: false },
@@ -64,20 +76,15 @@ const defaultSettings: SettingsState = {
 const tabs = [
   { id: "profile", label: "Profile", icon: UserRound },
   { id: "templates", label: "Report Templates", icon: FileText },
-  { id: "report", label: "Report Information", icon: Building2 },
+  { id: "report", label: "Report Information and Fields", icon: Building2 },
   { id: "security", label: "Security", icon: LockKeyhole },
   { id: "preferences", label: "Preferences", icon: SlidersHorizontal },
-];
-
-const reportFieldGroups = [
-  { title: "Patient demographics & identification", fieldIds: ["patientName", "patientMrn", "patientAgeGender", "patientDob", "patientContact", "patientWard"] },
-  { title: "Encounter & metadata", fieldIds: ["reportTitle", "reportId", "encounterDate", "referringDoctor", "attendingDoctor"] },
-  { title: "Clinical content & findings", fieldIds: ["chiefComplaints", "vitalSigns", "clinicalFindings", "diagnosis", "prescriptions", "labRadiologyFindings", "advice"] },
 ];
 
 export default function SettingsPage() {
   const { data: session, status } = useSession();
   const [activeTab, setActiveTab] = useState("profile");
+  const [previewTemplateId, setPreviewTemplateId] = useState<string | null>(null);
   const [settings, setSettings] = useState<SettingsState>(defaultSettings);
   const [isLoaded, setIsLoaded] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
@@ -100,15 +107,38 @@ export default function SettingsPage() {
       const storedSettings = window.localStorage.getItem("sewacare-admin-settings");
       if (storedSettings) {
         const parsed = JSON.parse(storedSettings) as Partial<SettingsState>;
+        const savedReportInfo = parsed.reportInfo as (Partial<SettingsState["reportInfo"]> & { signature?: string }) | undefined;
+        const { signature: legacySignature, ...savedReportFields } = savedReportInfo ?? {};
+        const storedTemplates = Array.isArray(parsed.templates) ? parsed.templates as { id: string; name: string; category: string; enabled: boolean; fieldIds?: string[] }[] : [];
+        const storedReportFields = Array.isArray(savedReportInfo?.fields) ? savedReportInfo.fields.map((field) => field.id === "signature" ? { ...field, id: "hospitalStamp", label: "Hospital stamp/signature" } : field) : [];
+        const legacyFieldValues: Record<string, string> = {
+          followUpInstructions: savedReportFields.followUpInstructions || "",
+          followUpDate: savedReportFields.followUpDate || "",
+          emergencyRedFlags: savedReportFields.emergencyRedFlags || "",
+        };
+        const reportFields = defaultSettings.reportInfo.fields.map((field) => {
+          const storedField = storedReportFields.find((item) => item.id === field.id);
+          return { ...field, value: typeof storedField?.value === "string" ? storedField.value : legacyFieldValues[field.id] ?? "" };
+        });
+        const templates = defaultTemplates.map((template) => {
+          const storedTemplate = storedTemplates.find((item) => item.id === template.id);
+          return storedTemplate
+            ? { ...template, ...storedTemplate, fieldIds: allReportFieldIds }
+            : template;
+        });
+        const defaultTemplateIds = new Set(defaultTemplates.map((template) => template.id));
+        templates.push(...storedTemplates.filter((template) => !defaultTemplateIds.has(template.id)).map((template) => ({ ...template, fieldIds: allReportFieldIds })));
         setSettings({
           ...defaultSettings,
           ...parsed,
+          templates,
           profile: { ...profileDefaults, ...parsed.profile },
-          templates: Array.isArray(parsed.templates) ? parsed.templates : defaultSettings.templates,
           reportInfo: {
             ...defaultSettings.reportInfo,
-            ...parsed.reportInfo,
-            fields: Array.isArray(parsed.reportInfo?.fields) ? parsed.reportInfo.fields : defaultSettings.reportInfo.fields,
+            ...savedReportFields,
+            hospitalStamp: savedReportFields.hospitalStamp ?? legacySignature ?? "",
+            doctorEducations: Array.isArray(savedReportFields.doctorEducations) ? savedReportFields.doctorEducations.join(", ") : typeof savedReportFields.doctorEducations === "string" ? savedReportFields.doctorEducations : "",
+            fields: reportFields,
           },
           security: { ...defaultSettings.security, ...parsed.security },
           preferences: { ...defaultSettings.preferences, ...parsed.preferences },
@@ -134,18 +164,18 @@ export default function SettingsPage() {
     setSettings((current) => ({ ...current, [section]: { ...current[section], [field]: value } } as SettingsState));
   };
 
-  const updateReportField = (id: string, enabled: boolean) => {
+  const updateReportField = (id: string, value: string) => {
     setSaveMessage("");
     setSettings((current) => ({
       ...current,
       reportInfo: {
         ...current.reportInfo,
-        fields: current.reportInfo.fields.map((field) => field.id === id ? { ...field, enabled } : field),
+        fields: current.reportInfo.fields.map((field) => field.id === id ? { ...field, value } : field),
       },
     }));
   };
 
-  const handleReportImageChange = (event: React.ChangeEvent<HTMLInputElement>, field: "logo" | "signature", imageLabel: string) => {
+  const handleReportImageChange = (event: React.ChangeEvent<HTMLInputElement>, field: "logo" | "hospitalStamp" | "doctorSignature", imageLabel: string) => {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
@@ -231,7 +261,7 @@ export default function SettingsPage() {
   const addTemplate = () => {
     setSettings((current) => ({
       ...current,
-      templates: [...current.templates, { id: `template-${Date.now()}`, name: "New report template", category: "General", enabled: true }],
+      templates: [...current.templates, { id: `template-${Date.now()}`, name: "New report template", category: "General", enabled: true, fieldIds: allReportFieldIds }],
     }));
     setSaveMessage("");
   };
@@ -243,6 +273,8 @@ export default function SettingsPage() {
     }));
     setSaveMessage("");
   };
+
+  const previewTemplate = settings.templates.find((template) => template.id === previewTemplateId);
 
   return (
     <div className="space-y-6">
@@ -278,19 +310,57 @@ export default function SettingsPage() {
       </section>}
 
       {activeTab === "templates" && <section className="space-y-5 rounded-lg border border-gray-200 bg-white p-5 md:p-6">
-        <SectionHeader title="Report Templates" description="Choose and organize the report templates available to your team." actions={<button onClick={addTemplate} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Plus className="h-4 w-4" /> Add template</button>} />
+        <SectionHeader title="Report Templates" description="Manage five report formats. Every format includes the complete report field set." actions={<button onClick={addTemplate} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Plus className="h-4 w-4" /> Add template</button>} />
         <div className="divide-y divide-gray-100">
-          {settings.templates.map((template) => <div key={template.id} className="grid items-center gap-3 py-3 md:grid-cols-[minmax(0,1fr)_180px_auto]">
+          {settings.templates.map((template) => <div key={template.id} className="grid items-center gap-3 py-3 md:grid-cols-[minmax(0,1fr)_150px_auto]">
             <input aria-label="Template name" className={inputClass} value={template.name} onChange={(event) => updateTemplate(template.id, "name", event.target.value)} />
             <select aria-label="Template category" className={inputClass} value={template.category} onChange={(event) => updateTemplate(template.id, "category", event.target.value)}><option>Clinical</option><option>Laboratory</option><option>Imaging</option><option>General</option></select>
-            <label className="flex items-center gap-2 text-sm text-gray-600"><input type="checkbox" checked={template.enabled} onChange={(event) => updateTemplate(template.id, "enabled", event.target.checked)} className="h-4 w-4 accent-emerald-700" /> Enabled</label>
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2 text-sm text-gray-600"><input type="checkbox" checked={template.enabled} onChange={(event) => updateTemplate(template.id, "enabled", event.target.checked)} className="h-4 w-4 accent-emerald-700" /> Enabled</label>
+              <button onClick={() => setPreviewTemplateId(template.id)} className="inline-flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-emerald-700"><Eye className="h-4 w-4" /> Preview</button>
+            </div>
           </div>)}
         </div>
       </section>}
 
+      {previewTemplate && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 p-3 sm:p-6" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setPreviewTemplateId(null); }}>
+        <section role="dialog" aria-modal="true" aria-label={`${previewTemplate.name} preview`} className="flex max-h-[94dvh] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
+          <header className="flex items-center justify-between border-b border-gray-200 px-4 py-3 sm:px-6">
+            <div><p className="text-sm font-semibold text-gray-900">{previewTemplate.name}</p><p className="text-xs text-gray-500">Sample report preview · {settings.reportInfo.fields.length} fields</p></div>
+            <button onClick={() => setPreviewTemplateId(null)} aria-label="Close preview" className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"><X className="h-5 w-5" /></button>
+          </header>
+          <div className="overflow-y-auto bg-gray-100 p-3 sm:p-6">
+            <article className="mx-auto min-h-[700px] w-full max-w-3xl bg-white p-5 text-gray-900 shadow-sm sm:p-10">
+              <div className="flex items-center gap-4 border-b-2 border-emerald-800 pb-4">
+                {settings.reportInfo.logo && <img src={settings.reportInfo.logo} alt="Hospital logo" className="max-h-16 max-w-28 object-contain" />}
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-xl font-bold text-emerald-900">{settings.reportInfo.hospitalName || "Hospital name"}</h2>
+                  {settings.reportInfo.tagline && <p className="mt-0.5 text-sm text-gray-600">{settings.reportInfo.tagline}</p>}
+                  <p className="mt-1 text-xs leading-relaxed text-gray-500">{[settings.reportInfo.license && `License ${settings.reportInfo.license}`, settings.reportInfo.phone, settings.reportInfo.email, settings.reportInfo.website, settings.reportInfo.address].filter(Boolean).join(" · ")}</p>
+                </div>
+              </div>
+              <h3 className="py-5 text-center text-lg font-semibold">{previewTemplate.name}</h3>
+              <dl className="grid gap-x-6 sm:grid-cols-2">
+                {settings.reportInfo.fields.map((field) => <div key={field.id} className={`border-b border-gray-100 py-2 ${["chiefComplaints", "vitalSigns", "clinicalFindings", "diagnosis", "prescriptions", "labRadiologyFindings", "advice", "followUpInstructions", "emergencyRedFlags"].includes(field.id) ? "sm:col-span-2" : ""}`}>
+                  <dt className="text-[11px] font-semibold text-gray-600">{field.label}</dt>
+                  <dd className="mt-1 whitespace-pre-wrap text-sm text-gray-800">{field.value || `Enter ${field.label.toLowerCase()}`}</dd>
+                </div>)}
+                <div className="border-b border-gray-100 py-2"><dt className="text-[11px] font-semibold text-gray-600">Doctor name</dt><dd className="mt-1 text-sm text-gray-800">{settings.reportInfo.doctorName || "Doctor name"}</dd></div>
+                <div className="border-b border-gray-100 py-2"><dt className="text-[11px] font-semibold text-gray-600">Education & qualifications</dt><dd className="mt-1 text-sm text-gray-800">{settings.reportInfo.doctorEducations || "Doctor qualifications"}</dd></div>
+                <div className="border-b border-gray-100 py-2"><dt className="text-[11px] font-semibold text-gray-600">Role / designation</dt><dd className="mt-1 text-sm text-gray-800">{settings.reportInfo.doctorRole || "Doctor role"}</dd></div>
+                <div className="border-b border-gray-100 py-2"><dt className="text-[11px] font-semibold text-gray-600">Hospital stamp/signature</dt><dd className="mt-1">{settings.reportInfo.hospitalStamp ? <img src={settings.reportInfo.hospitalStamp} alt="Hospital stamp/signature" className="max-h-16 max-w-48 object-contain" /> : "Hospital stamp/signature"}</dd></div>
+                <div className="border-b border-gray-100 py-2"><dt className="text-[11px] font-semibold text-gray-600">Doctor signature</dt><dd className="mt-1">{settings.reportInfo.doctorSignature ? <img src={settings.reportInfo.doctorSignature} alt="Doctor signature" className="max-h-16 max-w-48 object-contain" /> : "Doctor signature"}</dd></div>
+                <div className="border-b border-gray-100 py-2 sm:col-span-2"><dt className="text-[11px] font-semibold text-gray-600">Disclaimer</dt><dd className="mt-1 whitespace-pre-wrap text-sm text-gray-800">{settings.reportInfo.disclaimer}</dd></div>
+              </dl>
+              <p className="mt-8 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-500">Sample layout only. Patient-specific values are entered when preparing a report.</p>
+            </article>
+          </div>
+        </section>
+      </div>}
+
       {activeTab === "report" && <div className="space-y-6">
         <section className="space-y-6 rounded-lg border border-gray-200 bg-white p-5 md:p-6">
-          <SectionHeader title="Hospital letterhead" description="Identity and contact details printed at the top of reports." />
+          <SectionHeader title="Informations" description="Hospital letterhead, disclaimer, and doctor authorization details included in every report." />
           <div className="flex flex-wrap items-center gap-4 border-b border-gray-100 pb-5">
             {settings.reportInfo.logo ? <img src={settings.reportInfo.logo} alt="Hospital logo preview" className="h-16 max-w-48 rounded border border-gray-200 bg-white p-2 object-contain" /> : <div className="grid h-16 w-24 place-items-center rounded border border-dashed border-gray-300 bg-gray-50 text-xs text-gray-400">No logo</div>}
             <div>
@@ -311,59 +381,65 @@ export default function SettingsPage() {
             <div><label className={labelClass} htmlFor="report-website">Website URL</label><input id="report-website" type="url" className={inputClass} value={settings.reportInfo.website} onChange={(event) => updateField("reportInfo", "website", event.target.value)} placeholder="https://hospital.org" /></div>
             <div className="md:col-span-2"><label className={labelClass} htmlFor="report-address">Physical address</label><input id="report-address" className={inputClass} value={settings.reportInfo.address} onChange={(event) => updateField("reportInfo", "address", event.target.value)} /></div>
           </div>
-        </section>
-
-        <section className="space-y-5 rounded-lg border border-gray-200 bg-white p-5 md:p-6">
-          <SectionHeader title="Report fields" description="Choose which patient, encounter, and clinical sections are available in report templates." />
-          <div className="grid gap-5 xl:grid-cols-2">
-            {reportFieldGroups.map((group) => <fieldset key={group.title} className="min-w-0 rounded-lg border border-gray-200 p-4">
-              <legend className="px-1 text-sm font-semibold text-gray-800">{group.title}</legend>
-              <div className="divide-y divide-gray-100">
-                {group.fieldIds.map((id) => {
-                  const field = settings.reportInfo.fields.find((item) => item.id === id);
-                  if (!field) return null;
-                  return <label key={field.id} className="flex min-h-11 items-center justify-between gap-4 py-2">
-                    <span className="text-sm text-gray-700">{field.label}</span>
-                    <input type="checkbox" checked={field.enabled} onChange={(event) => updateReportField(field.id, event.target.checked)} className="h-4 w-4 shrink-0 accent-emerald-700" />
-                  </label>;
-                })}
-              </div>
-            </fieldset>)}
-          </div>
-        </section>
-
-        <section className="space-y-6 rounded-lg border border-gray-200 bg-white p-5 md:p-6">
-          <SectionHeader title="Footer & sign-off" description="Set the closing instructions, emergency guidance, and authorization details printed on reports." />
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-6 border-t border-gray-100 pt-5 md:grid-cols-2">
             <div>
-              <label className={labelClass} htmlFor="report-follow-up">Follow-up instructions</label>
-              <textarea id="report-follow-up" rows={3} className={`${inputClass} resize-y`} value={settings.reportInfo.followUpInstructions} onChange={(event) => updateField("reportInfo", "followUpInstructions", event.target.value)} placeholder="Instructions for the patient's next visit or ongoing care" />
+              <label className={labelClass} htmlFor="report-disclaimer">Disclaimer text · included in every report</label>
+              <textarea id="report-disclaimer" rows={4} className={`${inputClass} resize-y`} value={settings.reportInfo.disclaimer} onChange={(event) => updateField("reportInfo", "disclaimer", event.target.value)} placeholder="Confidentiality, intended use, or clinical disclaimer" />
             </div>
             <div>
-              <label className={labelClass} htmlFor="report-follow-up-date">Follow-up date</label>
-              <input id="report-follow-up-date" type="date" className={inputClass} value={settings.reportInfo.followUpDate} onChange={(event) => updateField("reportInfo", "followUpDate", event.target.value)} />
-            </div>
-            <div className="md:col-span-2">
-              <label className={labelClass} htmlFor="report-red-flags">Emergency red flag symptoms</label>
-              <textarea id="report-red-flags" rows={3} className={`${inputClass} resize-y`} value={settings.reportInfo.emergencyRedFlags} onChange={(event) => updateField("reportInfo", "emergencyRedFlags", event.target.value)} placeholder="Symptoms that require urgent or emergency medical attention" />
-            </div>
-            <div className="md:col-span-2">
-              <label className={labelClass} htmlFor="report-disclaimer">Disclaimer text</label>
-              <textarea id="report-disclaimer" rows={3} className={`${inputClass} resize-y`} value={settings.reportInfo.disclaimer} onChange={(event) => updateField("reportInfo", "disclaimer", event.target.value)} placeholder="Confidentiality, intended use, or clinical disclaimer" />
-            </div>
-          </div>
-          <div className="border-t border-gray-100 pt-5">
-            <div className="flex flex-wrap items-center gap-4">
-              {settings.reportInfo.signature ? <img src={settings.reportInfo.signature} alt="Doctor signature or stamp preview" className="h-20 max-w-56 rounded border border-gray-200 bg-white p-2 object-contain" /> : <div className="grid h-20 w-40 place-items-center rounded border border-dashed border-gray-300 bg-gray-50 text-xs text-gray-400">No signature or stamp</div>}
-              <div>
-                <p className="text-sm font-medium text-gray-800">Doctor&apos;s digital signature / stamp</p>
-                <p className="mt-0.5 text-xs text-gray-500">PNG, JPG, or WebP up to 5 MB</p>
-                <div className="mt-2 flex items-center gap-3">
-                  <label className="inline-flex cursor-pointer items-center gap-1.5 text-sm font-medium text-emerald-700 hover:text-emerald-800"><Camera className="h-4 w-4" /> Upload signature<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => handleReportImageChange(event, "signature", "Signature or stamp")} className="sr-only" /></label>
-                  {settings.reportInfo.signature && <button type="button" onClick={() => updateField("reportInfo", "signature", "")} className="text-sm text-gray-500 hover:text-rose-600">Remove</button>}
+              <label className={labelClass}>Hospital stamp/signature · included in every report</label>
+              <div className="flex min-h-28 flex-wrap items-center gap-4 rounded-lg border border-dashed border-gray-300 p-4">
+                {settings.reportInfo.hospitalStamp ? <img src={settings.reportInfo.hospitalStamp} alt="Hospital stamp or signature preview" className="max-h-20 max-w-48 object-contain" /> : <div className="grid h-16 w-32 place-items-center rounded border border-gray-200 bg-gray-50 text-xs text-gray-400">No hospital stamp</div>}
+                <div>
+                  <p className="text-xs text-gray-500">PNG, JPG, or WebP up to 5 MB</p>
+                  <div className="mt-2 flex items-center gap-3">
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 text-sm font-medium text-emerald-700 hover:text-emerald-800"><Camera className="h-4 w-4" /> Upload stamp/signature<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => handleReportImageChange(event, "hospitalStamp", "Hospital stamp/signature")} className="sr-only" /></label>
+                    {settings.reportInfo.hospitalStamp && <button type="button" onClick={() => updateField("reportInfo", "hospitalStamp", "")} className="text-sm text-gray-500 hover:text-rose-600">Remove</button>}
+                  </div>
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section className="space-y-5 rounded-lg border border-gray-200 bg-white p-5 md:p-6">
+          <SectionHeader title="Doctor Details" description="These credentials and the doctor's signature are included in every report format." />
+          <div className="grid gap-4 md:grid-cols-2">
+            <div><label className={labelClass} htmlFor="report-doctor-name">Doctor name</label><input id="report-doctor-name" className={inputClass} value={settings.reportInfo.doctorName} onChange={(event) => updateField("reportInfo", "doctorName", event.target.value)} placeholder="e.g. Dr. A. Sharma" /></div>
+            <div><label className={labelClass} htmlFor="report-doctor-role">Role / designation</label><input id="report-doctor-role" className={inputClass} value={settings.reportInfo.doctorRole} onChange={(event) => updateField("reportInfo", "doctorRole", event.target.value)} placeholder="e.g. Consultant Physician" /></div>
+            <div className="md:col-span-2">
+              <label className={`${labelClass} sr-only`} htmlFor="doctor-educations">Education & qualifications</label>
+              <input id="doctor-educations" className={inputClass} value={settings.reportInfo.doctorEducations} onChange={(event) => updateField("reportInfo", "doctorEducations", event.target.value)} placeholder="e.g. MBBS, MD, PhD" />
+            </div>
+            <div className="md:col-span-2">
+              <label className={labelClass}>Doctor&apos;s signature · included in every report</label>
+              <div className="flex min-h-28 flex-wrap items-center gap-4 rounded-lg border border-dashed border-gray-300 p-4">
+                {settings.reportInfo.doctorSignature ? <img src={settings.reportInfo.doctorSignature} alt="Doctor signature preview" className="max-h-20 max-w-48 object-contain" /> : <div className="grid h-16 w-32 place-items-center rounded border border-gray-200 bg-gray-50 text-xs text-gray-400">No doctor signature</div>}
+                <div>
+                  <p className="text-xs text-gray-500">Transparent PNG recommended · up to 5 MB</p>
+                  <div className="mt-2 flex items-center gap-3">
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 text-sm font-medium text-emerald-700 hover:text-emerald-800"><Camera className="h-4 w-4" /> Upload signature<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => handleReportImageChange(event, "doctorSignature", "Doctor signature")} className="sr-only" /></label>
+                    {settings.reportInfo.doctorSignature && <button type="button" onClick={() => updateField("reportInfo", "doctorSignature", "")} className="text-sm text-gray-500 hover:text-rose-600">Remove</button>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-5 rounded-lg border border-gray-200 bg-white p-5 md:p-6">
+          <SectionHeader title="Report fields" description="Enter patient, visit, and clinical information. These values appear in the selected report preview." />
+          <div className="grid gap-4 md:grid-cols-2">
+            {settings.reportInfo.fields.map((field) => {
+              const isMultiline = ["chiefComplaints", "vitalSigns", "clinicalFindings", "prescriptions", "labRadiologyFindings", "advice", "followUpInstructions", "emergencyRedFlags"].includes(field.id);
+              const inputId = `report-field-${field.id}`;
+              return <div key={field.id} className={isMultiline ? "md:col-span-2" : ""}>
+                <label className={labelClass} htmlFor={inputId}>{field.label}</label>
+                {isMultiline
+                  ? <textarea id={inputId} rows={3} className={`${inputClass} resize-y`} value={field.value} onChange={(event) => updateReportField(field.id, event.target.value)} />
+                  : <input id={inputId} type={field.id === "patientDob" || field.id === "followUpDate" ? "date" : field.id === "encounterDate" ? "datetime-local" : "text"} className={inputClass} value={field.value} onChange={(event) => updateReportField(field.id, event.target.value)} />}
+              </div>;
+            })}
           </div>
         </section>
       </div>}
