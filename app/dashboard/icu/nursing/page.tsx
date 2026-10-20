@@ -118,7 +118,7 @@ export default function ICUNursingPage() {
           <p className="text-2xl font-bold text-gray-900">{icuNursingNotes.length}</p>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-          <p className="text-sm text-gray-500">Today's Notes</p>
+          <p className="text-sm text-gray-500">Today&apos;s Notes</p>
           <p className="text-2xl font-bold text-emerald-600">
             {icuNursingNotes.filter((n) => n.date === "2026-09-13").length}
           </p>

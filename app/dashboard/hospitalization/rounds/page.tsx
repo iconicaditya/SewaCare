@@ -98,7 +98,7 @@ export default function RoundsPage() {
           <p className="text-2xl font-bold text-gray-900">{doctorRounds.length}</p>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-          <p className="text-sm text-gray-500">Today's Rounds</p>
+          <p className="text-sm text-gray-500">Today&apos;s Rounds</p>
           <p className="text-2xl font-bold text-emerald-600">
             {doctorRounds.filter((r) => r.date === "2026-09-13").length}
           </p>

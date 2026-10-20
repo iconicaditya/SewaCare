@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { signIn } from "next-auth/react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Camera, X, Loader2, AlertCircle } from "lucide-react";
 import { FaGithub, FaApple } from "react-icons/fa";
@@ -501,9 +502,9 @@ export default function RegisterPage() {
           {/* Sign In Link */}
           <p className="text-center text-sm text-gray-500 mt-8">
             Already have an account?{" "}
-            <a href="/login" className="text-emerald-700 hover:text-emerald-800 font-medium transition-colors">
+            <Link href="/login" className="text-emerald-700 hover:text-emerald-800 font-medium transition-colors">
               Sign in
-            </a>
+            </Link>
           </p>
         </div>
       </div>

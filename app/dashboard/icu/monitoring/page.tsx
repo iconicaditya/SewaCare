@@ -149,7 +149,7 @@ export default function ICUMonitoringPage() {
           <p className="text-2xl font-bold text-emerald-600">{patients.length}</p>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-          <p className="text-sm text-gray-500">Today's Records</p>
+          <p className="text-sm text-gray-500">Today&apos;s Records</p>
           <p className="text-2xl font-bold text-blue-600">
             {monitoringRecords.filter((r) => r.time.startsWith("2026-09-13")).length}
           </p>

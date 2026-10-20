@@ -91,7 +91,7 @@ export default function SettingsPage() {
 
   const inputClass = "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/20";
   const labelClass = "mb-1.5 block text-sm font-medium text-gray-700";
-  const sessionUser = session?.user as (typeof session.user & { fullName?: string; role?: string; department?: string | null; profileImage?: string | null }) | null;
+  const sessionUser = session?.user as (NonNullable<typeof session>["user"] & { fullName?: string; role?: string; department?: string | null; profileImage?: string | null }) | undefined;
 
   useEffect(() => {
     if (status === "loading") return;

@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { signIn } from "next-auth/react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 
@@ -239,9 +240,9 @@ export default function LoginPage() {
           {/* Sign Up */}
           <p className="text-center text-sm text-gray-500 mt-8">
             {"Don\u2019t have an account?"}{" "}
-            <a href="/register" className="text-emerald-700 hover:text-emerald-800 font-medium transition-colors">
+            <Link href="/register" className="text-emerald-700 hover:text-emerald-800 font-medium transition-colors">
               Create one
-            </a>
+            </Link>
           </p>
         </div>
       </div>
