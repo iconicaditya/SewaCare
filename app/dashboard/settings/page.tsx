@@ -1,104 +1,389 @@
 "use client";
 
-import { useState } from "react";
-import { Save, Building2, Settings, Bell, Palette } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { Building2, Camera, FileText, LockKeyhole, Plus, Save, SlidersHorizontal, UserRound } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs } from "@/components/ui/tabs";
 import SectionHeader from "@/components/ui/section-header";
 
+type SettingsState = {
+  profile: { fullName: string; email: string; role: string; department: string; profileImage: string };
+  templates: { id: string; name: string; category: string; enabled: boolean }[];
+  reportInfo: { hospitalName: string; logo: string; license: string; tagline: string; phone: string; email: string; website: string; address: string; followUpInstructions: string; followUpDate: string; emergencyRedFlags: string; signature: string; disclaimer: string; fields: { id: string; label: string; enabled: boolean }[] };
+  security: { sessionTimeout: string; loginAlerts: boolean; requireReauthentication: boolean };
+  preferences: { language: string; dateFormat: string; emailNotifications: boolean; inAppNotifications: boolean };
+};
+
+const defaultSettings: SettingsState = {
+  profile: { fullName: "", email: "", role: "", department: "", profileImage: "" },
+  templates: [
+    { id: "discharge", name: "Discharge summary", category: "Clinical", enabled: true },
+    { id: "lab", name: "Laboratory result", category: "Laboratory", enabled: true },
+    { id: "radiology", name: "Radiology report", category: "Imaging", enabled: true },
+  ],
+  reportInfo: {
+    hospitalName: "SewaCare Hospital",
+    logo: "",
+    license: "",
+    tagline: "",
+    phone: "01-4221000",
+    email: "info@sewacare.com",
+    website: "",
+    address: "New Baneshwor, Kathmandu, Nepal",
+    followUpInstructions: "",
+    followUpDate: "",
+    emergencyRedFlags: "",
+    signature: "",
+    disclaimer: "This report is confidential and intended only for the named patient and authorized healthcare professionals.",
+    fields: [
+      { id: "patientName", label: "Patient full name", enabled: true },
+      { id: "patientMrn", label: "Patient ID / Medical record number (MRN)", enabled: true },
+      { id: "patientAgeGender", label: "Age and gender", enabled: true },
+      { id: "patientDob", label: "Date of birth (DOB)", enabled: true },
+      { id: "patientContact", label: "Patient contact details", enabled: true },
+      { id: "patientWard", label: "Assigned ward / room number", enabled: true },
+      { id: "reportTitle", label: "Report title / type", enabled: true },
+      { id: "reportId", label: "Report ID / accession number", enabled: true },
+      { id: "encounterDate", label: "Encounter / visit date and time", enabled: true },
+      { id: "referringDoctor", label: "Referring doctor / physician", enabled: true },
+      { id: "attendingDoctor", label: "Treating / attending doctor", enabled: true },
+      { id: "chiefComplaints", label: "Chief complaints", enabled: true },
+      { id: "vitalSigns", label: "Vital signs", enabled: true },
+      { id: "clinicalFindings", label: "Clinical examination / findings", enabled: true },
+      { id: "diagnosis", label: "Diagnosis", enabled: true },
+      { id: "prescriptions", label: "Prescriptions / medications", enabled: true },
+      { id: "labRadiologyFindings", label: "Laboratory or radiology findings", enabled: true },
+      { id: "advice", label: "Advice and lifestyle recommendations", enabled: true },
+    ],
+  },
+  security: { sessionTimeout: "30", loginAlerts: true, requireReauthentication: false },
+  preferences: { language: "English", dateFormat: "YYYY-MM-DD", emailNotifications: true, inAppNotifications: true },
+};
+
 const tabs = [
-  { id: "hospital", label: "Hospital Information", icon: Building2 },
-  { id: "departments", label: "Departments" },
-  { id: "services", label: "Services & Charges" },
-  { id: "system", label: "System Preferences" },
-  { id: "notifications", label: "Notification Preferences", icon: Bell },
+  { id: "profile", label: "Profile", icon: UserRound },
+  { id: "templates", label: "Report Templates", icon: FileText },
+  { id: "report", label: "Report Information", icon: Building2 },
+  { id: "security", label: "Security", icon: LockKeyhole },
+  { id: "preferences", label: "Preferences", icon: SlidersHorizontal },
+];
+
+const reportFieldGroups = [
+  { title: "Patient demographics & identification", fieldIds: ["patientName", "patientMrn", "patientAgeGender", "patientDob", "patientContact", "patientWard"] },
+  { title: "Encounter & metadata", fieldIds: ["reportTitle", "reportId", "encounterDate", "referringDoctor", "attendingDoctor"] },
+  { title: "Clinical content & findings", fieldIds: ["chiefComplaints", "vitalSigns", "clinicalFindings", "diagnosis", "prescriptions", "labRadiologyFindings", "advice"] },
 ];
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState("hospital");
+  const { data: session, status } = useSession();
+  const [activeTab, setActiveTab] = useState("profile");
+  const [settings, setSettings] = useState<SettingsState>(defaultSettings);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
 
-  const inputClass = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400";
-  const labelClass = "block text-sm font-medium text-gray-700 mb-1.5";
+  const inputClass = "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/20";
+  const labelClass = "mb-1.5 block text-sm font-medium text-gray-700";
+  const sessionUser = session?.user as (typeof session.user & { fullName?: string; role?: string; department?: string | null; profileImage?: string | null }) | null;
+
+  useEffect(() => {
+    if (status === "loading") return;
+    const profileDefaults = {
+      ...defaultSettings.profile,
+      fullName: sessionUser?.fullName ?? sessionUser?.name ?? "",
+      email: sessionUser?.email ?? "",
+      role: sessionUser?.role ?? "",
+      department: sessionUser?.department ?? "",
+      profileImage: sessionUser?.profileImage ?? sessionUser?.image ?? "",
+    };
+    try {
+      const storedSettings = window.localStorage.getItem("sewacare-admin-settings");
+      if (storedSettings) {
+        const parsed = JSON.parse(storedSettings) as Partial<SettingsState>;
+        setSettings({
+          ...defaultSettings,
+          ...parsed,
+          profile: { ...profileDefaults, ...parsed.profile },
+          templates: Array.isArray(parsed.templates) ? parsed.templates : defaultSettings.templates,
+          reportInfo: {
+            ...defaultSettings.reportInfo,
+            ...parsed.reportInfo,
+            fields: Array.isArray(parsed.reportInfo?.fields) ? parsed.reportInfo.fields : defaultSettings.reportInfo.fields,
+          },
+          security: { ...defaultSettings.security, ...parsed.security },
+          preferences: { ...defaultSettings.preferences, ...parsed.preferences },
+        });
+      }
+    } catch {
+      setSettings({ ...defaultSettings, profile: profileDefaults });
+    }
+    setIsLoaded(true);
+  }, [status, sessionUser?.fullName, sessionUser?.name, sessionUser?.email, sessionUser?.role, sessionUser?.department, sessionUser?.profileImage, sessionUser?.image]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    try {
+      window.localStorage.setItem("sewacare-admin-settings", JSON.stringify(settings));
+    } catch {
+      setSaveMessage("Browser storage is unavailable; changes will not persist after closing this tab.");
+    }
+  }, [isLoaded, settings]);
+
+  const updateField = (section: "profile" | "reportInfo" | "security" | "preferences", field: string, value: string | boolean) => {
+    setSaveMessage("");
+    setSettings((current) => ({ ...current, [section]: { ...current[section], [field]: value } } as SettingsState));
+  };
+
+  const updateReportField = (id: string, enabled: boolean) => {
+    setSaveMessage("");
+    setSettings((current) => ({
+      ...current,
+      reportInfo: {
+        ...current.reportInfo,
+        fields: current.reportInfo.fields.map((field) => field.id === id ? { ...field, enabled } : field),
+      },
+    }));
+  };
+
+  const handleReportImageChange = (event: React.ChangeEvent<HTMLInputElement>, field: "logo" | "signature", imageLabel: string) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setSaveMessage(`Choose an image file for the ${imageLabel.toLowerCase()}.`);
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setSaveMessage(`${imageLabel} files must be smaller than 5 MB.`);
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      const scale = Math.min(1, 900 / Math.max(image.naturalWidth, image.naturalHeight));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const context = canvas.getContext("2d");
+      if (!context) {
+        URL.revokeObjectURL(previewUrl);
+        setSaveMessage(`This ${imageLabel.toLowerCase()} could not be processed. Try another file.`);
+        return;
+      }
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      updateField("reportInfo", field, canvas.toDataURL("image/webp", 0.85));
+      URL.revokeObjectURL(previewUrl);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(previewUrl);
+      setSaveMessage(`This ${imageLabel.toLowerCase()} could not be opened. Try another file.`);
+    };
+    image.src = previewUrl;
+  };
+
+  const handleProfileImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setSaveMessage("Choose an image file for your profile photo.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setSaveMessage("Profile photos must be smaller than 5 MB.");
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 400;
+      canvas.height = 400;
+      const side = Math.min(image.naturalWidth, image.naturalHeight);
+      const context = canvas.getContext("2d");
+      if (!context) {
+        URL.revokeObjectURL(previewUrl);
+        setSaveMessage("This image could not be processed. Try another file.");
+        return;
+      }
+      context.drawImage(image, (image.naturalWidth - side) / 2, (image.naturalHeight - side) / 2, side, side, 0, 0, 400, 400);
+      updateField("profile", "profileImage", canvas.toDataURL("image/jpeg", 0.82));
+      URL.revokeObjectURL(previewUrl);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(previewUrl);
+      setSaveMessage("This image could not be opened. Try another file.");
+    };
+    image.src = previewUrl;
+  };
+
+  const saveSettings = () => {
+    try {
+      window.localStorage.setItem("sewacare-admin-settings", JSON.stringify(settings));
+      setSaveMessage("Settings saved in this browser.");
+    } catch {
+      setSaveMessage("Browser storage is unavailable; changes will not persist after closing this tab.");
+    }
+  };
+
+  const addTemplate = () => {
+    setSettings((current) => ({
+      ...current,
+      templates: [...current.templates, { id: `template-${Date.now()}`, name: "New report template", category: "General", enabled: true }],
+    }));
+    setSaveMessage("");
+  };
+
+  const updateTemplate = (id: string, field: "name" | "category" | "enabled", value: string | boolean) => {
+    setSettings((current) => ({
+      ...current,
+      templates: current.templates.map((template) => template.id === id ? { ...template, [field]: value } : template),
+    }));
+    setSaveMessage("");
+  };
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Settings" description="System configuration and preferences" />
-      <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
-      {activeTab === "hospital" && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-6">
-          <SectionHeader title="Hospital Information" description="Basic hospital details" />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label className={labelClass}>Hospital Name</label><input className={inputClass} defaultValue="SewaCare Hospital" /></div>
-            <div><label className={labelClass}>Phone</label><input className={inputClass} defaultValue="01-4221000" /></div>
-            <div><label className={labelClass}>Email</label><input type="email" className={inputClass} defaultValue="info@sewacare.com" /></div>
-            <div><label className={labelClass}>Website</label><input className={inputClass} defaultValue="www.sewacare.com" /></div>
-            <div className="md:col-span-2"><label className={labelClass}>Address</label><input className={inputClass} defaultValue="New Baneshwor, Kathmandu, Nepal" /></div>
-          </div>
-          <div><label className={labelClass}>Logo</label>
-            <div className="flex items-center gap-4 mt-1">
-              <img src="/logo.png" alt="Hospital Logo" className="h-12 w-auto" />
-              <button className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg px-4 py-2 text-sm font-medium">Change Logo</button>
+      <PageHeader
+        title="Settings"
+        description="Manage your profile, report setup, and account preferences."
+        actions={<button onClick={saveSettings} className="inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"><Save className="h-4 w-4" /> Save changes</button>}
+      />
+      <div className="overflow-x-auto">
+        <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+      </div>
+      {saveMessage && <p role="status" className="text-sm text-emerald-700">{saveMessage}</p>}
+
+      {activeTab === "profile" && <section className="space-y-6 rounded-lg border border-gray-200 bg-white p-5 md:p-6">
+        <SectionHeader title="Profile" description="Your account details used across the hospital workspace." />
+        <div className="flex items-center gap-4 border-b border-gray-100 pb-5">
+          {settings.profile.profileImage ? <img src={settings.profile.profileImage} alt="Profile" className="h-16 w-16 rounded-full border border-gray-200 object-cover" /> : <div className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-emerald-50 text-lg font-semibold text-emerald-800">{settings.profile.fullName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || <UserRound size={22} />}</div>}
+          <div>
+            <p className="text-sm font-medium text-gray-800">Profile photo</p>
+            <p className="mt-0.5 text-xs text-gray-500">JPG, PNG, or WebP up to 5 MB</p>
+            <div className="mt-2 flex items-center gap-3">
+              <label className="inline-flex cursor-pointer items-center gap-1.5 text-sm font-medium text-emerald-700 hover:text-emerald-800"><Camera className="h-4 w-4" /> Upload photo<input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleProfileImageChange} className="sr-only" /></label>
+              {settings.profile.profileImage && <button type="button" onClick={() => updateField("profile", "profileImage", "")} className="text-sm text-gray-500 hover:text-rose-600">Remove</button>}
             </div>
           </div>
-          <button onClick={() => alert("Settings saved! (Mock)")} className="bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg px-4 py-2 text-sm font-medium flex items-center gap-2">
-            <Save className="w-4 h-4" /> Save Changes
-          </button>
         </div>
-      )}
-      {activeTab === "departments" && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <SectionHeader title="Department Configuration" description="Manage active departments" />
-          <p className="text-sm text-gray-500 mt-4">Department management is available at <a href="/dashboard/departments" className="text-emerald-600 hover:underline">Departments</a></p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div><label className={labelClass} htmlFor="profile-name">Full name</label><input id="profile-name" className={inputClass} value={settings.profile.fullName} onChange={(event) => updateField("profile", "fullName", event.target.value)} placeholder="Your name" /></div>
+          <div><label className={labelClass} htmlFor="profile-email">Email</label><input id="profile-email" type="email" className={inputClass} value={settings.profile.email} onChange={(event) => updateField("profile", "email", event.target.value)} placeholder="name@hospital.org" /></div>
+          <div><label className={labelClass} htmlFor="profile-role">Role</label><select id="profile-role" className={inputClass} value={settings.profile.role} onChange={(event) => updateField("profile", "role", event.target.value)}><option value="">Select role</option>{settings.profile.role && !["doctor", "nurse", "admin", "lab_technician", "pharmacist"].includes(settings.profile.role) && <option value={settings.profile.role}>{settings.profile.role}</option>}<option value="doctor">Doctor</option><option value="nurse">Nurse</option><option value="admin">Administrator</option><option value="lab_technician">Lab Technician</option><option value="pharmacist">Pharmacist</option></select></div>
+          <div><label className={labelClass} htmlFor="profile-department">Department</label><select id="profile-department" className={inputClass} value={settings.profile.department} onChange={(event) => updateField("profile", "department", event.target.value)}><option value="">Select department</option>{settings.profile.department && !["emergency", "cardiology", "neurology", "orthopedics", "pediatrics", "oncology", "radiology", "general"].includes(settings.profile.department) && <option value={settings.profile.department}>{settings.profile.department}</option>}<option value="emergency">Emergency</option><option value="cardiology">Cardiology</option><option value="neurology">Neurology</option><option value="orthopedics">Orthopedics</option><option value="pediatrics">Pediatrics</option><option value="oncology">Oncology</option><option value="radiology">Radiology</option><option value="general">General Medicine</option></select></div>
         </div>
-      )}
-      {activeTab === "services" && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <SectionHeader title="Services & Charges" description="Manage hospital service pricing" />
-          <p className="text-sm text-gray-500 mt-4">Service management is available at <a href="/dashboard/billing/services" className="text-emerald-600 hover:underline">Services & Charges</a></p>
+      </section>}
+
+      {activeTab === "templates" && <section className="space-y-5 rounded-lg border border-gray-200 bg-white p-5 md:p-6">
+        <SectionHeader title="Report Templates" description="Choose and organize the report templates available to your team." actions={<button onClick={addTemplate} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Plus className="h-4 w-4" /> Add template</button>} />
+        <div className="divide-y divide-gray-100">
+          {settings.templates.map((template) => <div key={template.id} className="grid items-center gap-3 py-3 md:grid-cols-[minmax(0,1fr)_180px_auto]">
+            <input aria-label="Template name" className={inputClass} value={template.name} onChange={(event) => updateTemplate(template.id, "name", event.target.value)} />
+            <select aria-label="Template category" className={inputClass} value={template.category} onChange={(event) => updateTemplate(template.id, "category", event.target.value)}><option>Clinical</option><option>Laboratory</option><option>Imaging</option><option>General</option></select>
+            <label className="flex items-center gap-2 text-sm text-gray-600"><input type="checkbox" checked={template.enabled} onChange={(event) => updateTemplate(template.id, "enabled", event.target.checked)} className="h-4 w-4 accent-emerald-700" /> Enabled</label>
+          </div>)}
         </div>
-      )}
-      {activeTab === "system" && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-6">
-          <SectionHeader title="System Preferences" />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label className={labelClass}>Date Format</label>
-              <select className={inputClass}><option>YYYY-MM-DD</option><option>DD/MM/YYYY</option><option>MM/DD/YYYY</option></select>
-            </div>
-            <div><label className={labelClass}>Time Format</label>
-              <select className={inputClass}><option>24 Hour</option><option>12 Hour</option></select>
-            </div>
-            <div><label className={labelClass}>Currency</label>
-              <select className={inputClass}><option>NPR (रु)</option><option>USD ($)</option></select>
-            </div>
-            <div><label className={labelClass}>Language</label>
-              <select className={inputClass}><option>English</option><option>Nepali</option></select>
+      </section>}
+
+      {activeTab === "report" && <div className="space-y-6">
+        <section className="space-y-6 rounded-lg border border-gray-200 bg-white p-5 md:p-6">
+          <SectionHeader title="Hospital letterhead" description="Identity and contact details printed at the top of reports." />
+          <div className="flex flex-wrap items-center gap-4 border-b border-gray-100 pb-5">
+            {settings.reportInfo.logo ? <img src={settings.reportInfo.logo} alt="Hospital logo preview" className="h-16 max-w-48 rounded border border-gray-200 bg-white p-2 object-contain" /> : <div className="grid h-16 w-24 place-items-center rounded border border-dashed border-gray-300 bg-gray-50 text-xs text-gray-400">No logo</div>}
+            <div>
+              <p className="text-sm font-medium text-gray-800">Hospital logo</p>
+              <p className="mt-0.5 text-xs text-gray-500">PNG, JPG, or WebP up to 5 MB</p>
+              <div className="mt-2 flex items-center gap-3">
+                <label className="inline-flex cursor-pointer items-center gap-1.5 text-sm font-medium text-emerald-700 hover:text-emerald-800"><Building2 className="h-4 w-4" /> Upload logo<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => handleReportImageChange(event, "logo", "Hospital logo")} className="sr-only" /></label>
+                {settings.reportInfo.logo && <button type="button" onClick={() => updateField("reportInfo", "logo", "")} className="text-sm text-gray-500 hover:text-rose-600">Remove</button>}
+              </div>
             </div>
           </div>
-          <button onClick={() => alert("Settings saved! (Mock)")} className="bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg px-4 py-2 text-sm font-medium flex items-center gap-2">
-            <Save className="w-4 h-4" /> Save Changes
-          </button>
-        </div>
-      )}
-      {activeTab === "notifications" && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-6">
-          <SectionHeader title="Notification Preferences" />
-          <div className="space-y-4">
-            {["New Appointment", "Appointment Reminder", "Lab Report Ready", "Radiology Report Ready", "Low Stock Alert", "Medicine Expiry Alert", "Bed Availability", "New Admission", "Discharge", "Staff Notification"].map((pref) => (
-              <label key={pref} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                <span className="text-sm text-gray-700">{pref}</span>
-                <div className="relative">
-                  <input type="checkbox" defaultChecked className="sr-only peer" />
-                  <div className="w-9 h-5 bg-gray-200 rounded-full peer-checked:bg-emerald-500 transition-colors" />
-                  <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4 shadow-sm" />
+          <div className="grid gap-4 md:grid-cols-2">
+            <div><label className={labelClass} htmlFor="report-hospital">Hospital name</label><input id="report-hospital" className={inputClass} value={settings.reportInfo.hospitalName} onChange={(event) => updateField("reportInfo", "hospitalName", event.target.value)} /></div>
+            <div><label className={labelClass} htmlFor="report-license">Registration or license number</label><input id="report-license" className={inputClass} value={settings.reportInfo.license} onChange={(event) => updateField("reportInfo", "license", event.target.value)} placeholder="Registration number" /></div>
+            <div><label className={labelClass} htmlFor="report-tagline">Tagline / department</label><input id="report-tagline" className={inputClass} value={settings.reportInfo.tagline} onChange={(event) => updateField("reportInfo", "tagline", event.target.value)} placeholder="e.g. Department of Radiology" /></div>
+            <div><label className={labelClass} htmlFor="report-phone">Contact phone number</label><input id="report-phone" type="tel" className={inputClass} value={settings.reportInfo.phone} onChange={(event) => updateField("reportInfo", "phone", event.target.value)} /></div>
+            <div><label className={labelClass} htmlFor="report-email">Contact email</label><input id="report-email" type="email" className={inputClass} value={settings.reportInfo.email} onChange={(event) => updateField("reportInfo", "email", event.target.value)} /></div>
+            <div><label className={labelClass} htmlFor="report-website">Website URL</label><input id="report-website" type="url" className={inputClass} value={settings.reportInfo.website} onChange={(event) => updateField("reportInfo", "website", event.target.value)} placeholder="https://hospital.org" /></div>
+            <div className="md:col-span-2"><label className={labelClass} htmlFor="report-address">Physical address</label><input id="report-address" className={inputClass} value={settings.reportInfo.address} onChange={(event) => updateField("reportInfo", "address", event.target.value)} /></div>
+          </div>
+        </section>
+
+        <section className="space-y-5 rounded-lg border border-gray-200 bg-white p-5 md:p-6">
+          <SectionHeader title="Report fields" description="Choose which patient, encounter, and clinical sections are available in report templates." />
+          <div className="grid gap-5 xl:grid-cols-2">
+            {reportFieldGroups.map((group) => <fieldset key={group.title} className="min-w-0 rounded-lg border border-gray-200 p-4">
+              <legend className="px-1 text-sm font-semibold text-gray-800">{group.title}</legend>
+              <div className="divide-y divide-gray-100">
+                {group.fieldIds.map((id) => {
+                  const field = settings.reportInfo.fields.find((item) => item.id === id);
+                  if (!field) return null;
+                  return <label key={field.id} className="flex min-h-11 items-center justify-between gap-4 py-2">
+                    <span className="text-sm text-gray-700">{field.label}</span>
+                    <input type="checkbox" checked={field.enabled} onChange={(event) => updateReportField(field.id, event.target.checked)} className="h-4 w-4 shrink-0 accent-emerald-700" />
+                  </label>;
+                })}
+              </div>
+            </fieldset>)}
+          </div>
+        </section>
+
+        <section className="space-y-6 rounded-lg border border-gray-200 bg-white p-5 md:p-6">
+          <SectionHeader title="Footer & sign-off" description="Set the closing instructions, emergency guidance, and authorization details printed on reports." />
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className={labelClass} htmlFor="report-follow-up">Follow-up instructions</label>
+              <textarea id="report-follow-up" rows={3} className={`${inputClass} resize-y`} value={settings.reportInfo.followUpInstructions} onChange={(event) => updateField("reportInfo", "followUpInstructions", event.target.value)} placeholder="Instructions for the patient's next visit or ongoing care" />
+            </div>
+            <div>
+              <label className={labelClass} htmlFor="report-follow-up-date">Follow-up date</label>
+              <input id="report-follow-up-date" type="date" className={inputClass} value={settings.reportInfo.followUpDate} onChange={(event) => updateField("reportInfo", "followUpDate", event.target.value)} />
+            </div>
+            <div className="md:col-span-2">
+              <label className={labelClass} htmlFor="report-red-flags">Emergency red flag symptoms</label>
+              <textarea id="report-red-flags" rows={3} className={`${inputClass} resize-y`} value={settings.reportInfo.emergencyRedFlags} onChange={(event) => updateField("reportInfo", "emergencyRedFlags", event.target.value)} placeholder="Symptoms that require urgent or emergency medical attention" />
+            </div>
+            <div className="md:col-span-2">
+              <label className={labelClass} htmlFor="report-disclaimer">Disclaimer text</label>
+              <textarea id="report-disclaimer" rows={3} className={`${inputClass} resize-y`} value={settings.reportInfo.disclaimer} onChange={(event) => updateField("reportInfo", "disclaimer", event.target.value)} placeholder="Confidentiality, intended use, or clinical disclaimer" />
+            </div>
+          </div>
+          <div className="border-t border-gray-100 pt-5">
+            <div className="flex flex-wrap items-center gap-4">
+              {settings.reportInfo.signature ? <img src={settings.reportInfo.signature} alt="Doctor signature or stamp preview" className="h-20 max-w-56 rounded border border-gray-200 bg-white p-2 object-contain" /> : <div className="grid h-20 w-40 place-items-center rounded border border-dashed border-gray-300 bg-gray-50 text-xs text-gray-400">No signature or stamp</div>}
+              <div>
+                <p className="text-sm font-medium text-gray-800">Doctor&apos;s digital signature / stamp</p>
+                <p className="mt-0.5 text-xs text-gray-500">PNG, JPG, or WebP up to 5 MB</p>
+                <div className="mt-2 flex items-center gap-3">
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 text-sm font-medium text-emerald-700 hover:text-emerald-800"><Camera className="h-4 w-4" /> Upload signature<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => handleReportImageChange(event, "signature", "Signature or stamp")} className="sr-only" /></label>
+                  {settings.reportInfo.signature && <button type="button" onClick={() => updateField("reportInfo", "signature", "")} className="text-sm text-gray-500 hover:text-rose-600">Remove</button>}
                 </div>
-              </label>
-            ))}
+              </div>
+            </div>
           </div>
-          <button onClick={() => alert("Notification preferences saved! (Mock)")} className="bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg px-4 py-2 text-sm font-medium flex items-center gap-2">
-            <Save className="w-4 h-4" /> Save Preferences
-          </button>
+        </section>
+      </div>}
+
+      {activeTab === "security" && <section className="space-y-5 rounded-lg border border-gray-200 bg-white p-5 md:p-6">
+        <SectionHeader title="Security" description="Basic safeguards for this browser session." />
+        <div className="max-w-xl"><label className={labelClass} htmlFor="session-timeout">Sign out after inactivity</label><select id="session-timeout" className={inputClass} value={settings.security.sessionTimeout} onChange={(event) => updateField("security", "sessionTimeout", event.target.value)}><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">1 hour</option><option value="120">2 hours</option></select></div>
+        <label className="flex items-center justify-between gap-4 border-t border-gray-100 pt-4"><span><span className="block text-sm font-medium text-gray-800">Login alerts</span><span className="mt-1 block text-xs text-gray-500">Receive a notice when your account is used to sign in.</span></span><input type="checkbox" checked={settings.security.loginAlerts} onChange={(event) => updateField("security", "loginAlerts", event.target.checked)} className="h-4 w-4 accent-emerald-700" /></label>
+        <label className="flex items-center justify-between gap-4 border-t border-gray-100 pt-4"><span><span className="block text-sm font-medium text-gray-800">Confirm before sensitive changes</span><span className="mt-1 block text-xs text-gray-500">Require re-authentication for profile and report configuration changes.</span></span><input type="checkbox" checked={settings.security.requireReauthentication} onChange={(event) => updateField("security", "requireReauthentication", event.target.checked)} className="h-4 w-4 accent-emerald-700" /></label>
+      </section>}
+
+      {activeTab === "preferences" && <section className="space-y-6 rounded-lg border border-gray-200 bg-white p-5 md:p-6">
+        <SectionHeader title="Preferences" description="Set defaults for your workspace and notifications." />
+        <div className="grid gap-4 md:grid-cols-2">
+          <div><label className={labelClass} htmlFor="pref-language">Language</label><select id="pref-language" className={inputClass} value={settings.preferences.language} onChange={(event) => updateField("preferences", "language", event.target.value)}><option>English</option><option>Nepali</option></select></div>
+          <div><label className={labelClass} htmlFor="pref-date">Date format</label><select id="pref-date" className={inputClass} value={settings.preferences.dateFormat} onChange={(event) => updateField("preferences", "dateFormat", event.target.value)}><option>YYYY-MM-DD</option><option>DD/MM/YYYY</option><option>MM/DD/YYYY</option></select></div>
         </div>
-      )}
+        <label className="flex items-center justify-between gap-4 border-t border-gray-100 pt-4"><span className="text-sm font-medium text-gray-800">Email notifications</span><input type="checkbox" checked={settings.preferences.emailNotifications} onChange={(event) => updateField("preferences", "emailNotifications", event.target.checked)} className="h-4 w-4 accent-emerald-700" /></label>
+        <label className="flex items-center justify-between gap-4 border-t border-gray-100 pt-4"><span className="text-sm font-medium text-gray-800">In-app notifications</span><input type="checkbox" checked={settings.preferences.inAppNotifications} onChange={(event) => updateField("preferences", "inAppNotifications", event.target.checked)} className="h-4 w-4 accent-emerald-700" /></label>
+      </section>}
     </div>
   );
 }

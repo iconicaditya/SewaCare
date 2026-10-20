@@ -151,7 +151,7 @@ export default function RegisterPage() {
     setIsSubmitting(true);
     setError(null);
     try {
-      await signIn("google", { callbackUrl: "/dashboard" });
+      await signIn("google", { callbackUrl: "/new" });
     } catch (err) {
       console.error("Google sign-in failed:", err);
       setError("Google sign-in failed. Please try again.");

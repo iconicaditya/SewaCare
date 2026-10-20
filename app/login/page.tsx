@@ -60,7 +60,7 @@ export default function LoginPage() {
       }
 
       // Login successful — redirect to dashboard
-      router.push("/dashboard");
+      router.push("/new");
     } catch (err) {
       console.error("Login failed:", err);
       setError("Something went wrong. Please try again.");
@@ -74,7 +74,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
     setError(null);
     try {
-      await signIn("google", { callbackUrl: "/dashboard" });
+      await signIn("google", { callbackUrl: "/new" });
     } catch (err) {
       console.error("Google sign-in failed:", err);
       setError("Google sign-in failed. Please try again.");

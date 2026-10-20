@@ -41,3 +41,11 @@
 .gradient-text {
   @apply bg-clip-text text-transparent bg-gradient-to-r from-red-600 to-blue-600;
 }
+
+.prompt-textarea {
+  scrollbar-width: none;
+}
+
+.prompt-textarea::-webkit-scrollbar {
+  display: none;
+}
